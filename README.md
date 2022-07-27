@@ -1,7 +1,7 @@
 - 👋 Hi, I’m @hYUNNYk
 - 👀 I’m interested in Embedded System
 - 🌱 I’m currently learning C++
-- 💞️ I’m looking to collaborate on Google
+- 💞️ I’m not looking to collaborate on with everone
 - 📫 How to reach me -> Not yet because I have to learn more😁
 
 <!---
