@@ -1,0 +1,154 @@
+// I used WizFi360 wifi chip module, so if you want to take my code then you need to use WizFi360
+// I used OLED Display called "SSD1306" So you have to prepare this chip module display
+// This is for Arduino, So I use ATmega2560, You need to prepare this
+// This is just for current weather from "Openeather" so if you need future weather then I'll make for you
+// Thank you for reading my code
+
+#include "WizFi360.h"
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <CN_SSD1306_Wire.h>
+
+#define OLED_RESET 4
+Adafruit_SSD1306 display(OLED_RESET);
+CN_SSD1306_Wire lucky(OLED_RESET);
+
+#define SERIAL_BAUDRATE  115200 // Serial speed 
+#define SERIAL1_BAUDRATE 115200 // Serial speed
+
+#define VARID  "API_CODE" // Write your API Code
+
+char ssid[] = "WIFI NAME"; // Write your WiFi name
+char pass[] = "PASSWORD"; // Write your WiFi password
+int status = WL_IDLE_STATUS;
+
+char server[] = "api.openweathermap.org";  // Openweathermap API 주소
+
+unsigned long lastConnectionTime = 0;         // Last time the server was connected (MilliSecond)
+const unsigned long postingInterval = 10000L; // Delay to request data from the server (MilliSecond)
+
+boolean readingVal;
+boolean getIsConnected = false;
+int val, temp;
+int tempVal;
+int pos = 0;
+int count = 0;
+
+WiFiClient client; // WiFiClient Object Declaration
+
+void httpRequest();
+void printWifiStatus();
+
+void setup() {
+ display.begin(SSD1306_SWITCHCAPVCC,0x3C);
+ delay(500);
+ display.begin(SSD1306_SWITCHCAPVCC,0x3C);
+ display.display();
+ delay(500);
+ 
+ display.clearDisplay(); // Clear Display
+
+ lucky.Fill_Screen(0x00,0x00); // initialize serial for debugging
+ Serial.begin(SERIAL_BAUDRATE); // initialize serial for WizFi360 module
+ Serial3.begin(SERIAL1_BAUDRATE); // initialize WizFi360 module
+ WiFi.init(&Serial3);
+
+  if (WiFi.status() == WL_NO_SHIELD) {  // If you're having trouble with your WiFi board,
+   Serial.println("WiFi board error");  // Output WiFi board error to serial monitor
+   while (true);
+   }
+
+   while ( status != WL_CONNECTED) {
+    Serial.print("Attempting to connect to WPA SSID: ");
+    Serial.println(ssid);
+    status = WiFi.begin(ssid, pass);
+    }
+    Serial.println("You're connected to the network");
+    printWifiStatus();
+}
+
+void loop() {
+ String rcvbuf;
+ String valString;
+ 
+  while (client.available()) {
+  if ( rcvbuf.endsWith("{\"temp\":")) {
+    readingVal = true;
+    valString = "";
+    }
+    char c = client.read(); //Serial.write(c);
+     if ( c != NULL ) {
+      if (rcvbuf.length() > 200)
+       rcvbuf = "";
+       rcvbuf += c;
+       }
+       if (readingVal) {
+        if (c != ',' ) {
+         valString += c;
+         }
+         else {
+          readingVal = false;
+          tempVal = valString.toInt(); // Converting the temperature value from String to Integer
+          display.setTextColor(WHITE); // Text color
+          display.setTextSize(2); // Text size
+          display.setCursor(0,0); // Text Position
+          display.println("now ");
+          display.setCursor(40,0);
+          display.print(tempVal-273); // Now temperature
+          display.display();
+          }
+       }
+   }
+   tempVal = 0;
+
+    if (millis() - lastConnectionTime > postingInterval) { //If interval time is met,
+     httpRequest(); //recall data
+     }
+}
+
+// Weather data call function to server
+void httpRequest() {
+ Serial.println();
+ client.stop();
+
+ // If you are connected to the server properly
+ if (client.connect(server, 80)) { // Sending HTTP requests
+  Serial.println("Connecting..."); 
+  // Check the weather in Seoul (To check the weather in other regions, change the Seoul,kr part to "Region, Country" in the middle.)
+  client.print("GET /data/2.5/weather?q=Seoul,kr&appid=");    
+  //client.print("GET /data/2.5/weather?q=london,uk&appid=");  // See Region Change
+  client.print(VARID);
+  client.println(" HTTP/1.1");
+  client.println("Host: api.openweathermap.org");
+  client.println("Connection: close");
+  client.println();   
+  // note the time that the connection was made
+  lastConnectionTime = millis();
+  getIsConnected = true;
+  }
+
+  // If you are not connected to the server properly, print Connection failed message
+  else {
+   Serial.println("Connection failed");
+   getIsConnected = false;
+   }
+}
+
+// WiFi connection status information output function(You can check serial monitor)
+void printWifiStatus() {
+ // print the SSID of the network you're attached to
+ Serial.print("SSID: ");
+ Serial.println(WiFi.SSID());
+
+ // print your WiFi shield's IP address
+ IPAddress ip = WiFi.localIP();
+ Serial.print("IP Address: ");
+ Serial.println(ip);
+
+ // print the received signal strength
+ long rssi = WiFi.RSSI();
+ Serial.print("Signal strength (RSSI):");
+ Serial.print(rssi);
+ Serial.println(" dBm");
+}
